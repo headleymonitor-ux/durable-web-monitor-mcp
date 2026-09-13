@@ -76,23 +76,33 @@ For adversarial URLs, infrastructure-level egress controls are still required.
 
 ## Browser adapter
 
-The browser adapter starts a new Playwright MCP subprocess for every fetch. v0.1.0 pins the tested browser dependency to:
+The browser adapter starts a new Playwright MCP subprocess for every fetch. v0.1.0 pins the MCP package and explicitly requests Chromium with sandboxing and isolated profile state:
 
 ```text
 npx -y @playwright/mcp@0.0.80
   --headless
+  --sandbox
   --isolated
   --browser chromium
-  --image-responses=omit
+  --image-responses omit
+  --codegen none
 ```
 
-The compatible Chromium binary is installed once with the Playwright build currently used by that pinned MCP package:
+By default, Playwright MCP resolves Chromium using its normal Playwright installation. The matching browser can be installed with:
 
 ```bash
 npx -y playwright@1.63.0-alpha-2026-08-31 install chromium
 ```
 
-It then calls:
+Some server deployments manage Chromium independently. Setting `DWM_BROWSER_EXECUTABLE_PATH` adds:
+
+```text
+--executable-path <configured path>
+```
+
+This keeps host-specific executable paths out of the package while allowing deployments to use a trusted system Chromium.
+
+The browser adapter calls:
 
 1. `browser_navigate`
 2. `browser_snapshot`
@@ -102,7 +112,7 @@ Before hashing, generated Playwright locator tokens such as `[ref=e17]` are remo
 
 Exiting the MCP client context tears down the subprocess. No shared browser profile is reused between monitor runs.
 
-The browser and MCP dependencies are intentionally pinned rather than fetched as `latest`. Upgrade them deliberately, install the matching browser build, rerun unit and browser integration tests, then change the pins in a reviewed release.
+The browser and MCP dependencies are intentionally pinned rather than fetched as `latest`. Upgrade them deliberately, install the matching browser build when applicable, rerun unit and browser integration tests, then change the pins in a reviewed release.
 
 This costs more than direct HTTP, so use it only when rendering is necessary.
 

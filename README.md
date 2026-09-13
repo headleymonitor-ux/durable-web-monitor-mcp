@@ -36,14 +36,14 @@ It rejects non-HTTPS URLs and hostnames that resolve to loopback, private, link-
 
 Application-level URL checks cannot completely eliminate DNS rebinding or browser redirect risk. For untrusted URLs, run the monitor in a container/VM with restrictive egress rules and no access to metadata services or private networks. See [SECURITY.md](SECURITY.md).
 
-The browser adapter uses Playwright MCP's `--isolated` mode so browser profile state is not persisted between checks. Playwright MCP itself is not a security boundary.
+The browser adapter uses Playwright MCP's `--sandbox` and `--isolated` modes. Isolation prevents normal browser profile persistence between checks; neither option makes Playwright MCP a complete security boundary.
 
 ## Requirements
 
 - Python 3.10+
 - Node.js 18+ and `npx` only if you use the browser adapter
 - `mcp>=2,<3`
-- Chromium installed for the pinned Playwright build if you use the browser adapter
+- Chromium available either through the pinned Playwright build or as a trusted system executable
 
 ## Install
 
@@ -58,11 +58,19 @@ The package installs two commands:
 - `dwm` — CLI for checks and notification handling;
 - `dwm-mcp` — stdio MCP server.
 
-For browser-backed checks, install Chromium once for the Playwright build used by Playwright MCP v0.0.80:
+For the default browser-backed setup, install Chromium once for the Playwright build used by Playwright MCP v0.0.80:
 
 ```bash
 npx -y playwright@1.63.0-alpha-2026-08-31 install chromium
 ```
+
+If your deployment manages Chromium separately, point the monitor at that trusted executable instead:
+
+```bash
+export DWM_BROWSER_EXECUTABLE_PATH=/path/to/chromium
+```
+
+When this variable is set, the browser adapter passes that path to Playwright MCP with `--executable-path`. The package never hard-codes a host-specific Chromium location.
 
 ## Run as an MCP server
 
@@ -125,12 +133,14 @@ An empty `watch_terms` list means any normalized content change is noteworthy.
 v0.1.0 deliberately pins the browser integration to the version tested for this release:
 
 ```text
-npx -y @playwright/mcp@0.0.80 --headless --isolated --browser chromium --image-responses=omit
+npx -y @playwright/mcp@0.0.80 --headless --sandbox --isolated --browser chromium --image-responses omit --codegen none
 ```
+
+If `DWM_BROWSER_EXECUTABLE_PATH` is set, `--executable-path <value>` is added to that command.
 
 Playwright accessibility snapshots contain generated locator references such as `[ref=e17]`. The monitor removes those ephemeral references before hashing so locator churn does not create false change alerts.
 
-Do not silently switch the package to `@latest` in production. Upgrade the pinned Playwright MCP and matching Playwright browser build deliberately, reinstall the browser binary, and rerun the unit and browser integration tests first.
+Do not silently switch the package to `@latest` in production. Upgrade the pinned Playwright MCP and matching Playwright browser build deliberately, reinstall the browser binary if needed, and rerun the unit and browser integration tests first.
 
 ## CLI
 
@@ -166,7 +176,7 @@ python -m unittest discover -s tests -v
 
 The Playwright MCP browser adapter is intentionally an integration boundary and is not launched by the unit tests.
 
-Before publishing a release, also test installation in a fresh virtual environment, start the installed `dwm-mcp` entry point, and run real direct-HTTPS and isolated-browser checks against non-sensitive public pages.
+Before publishing a release, also test installation in a fresh virtual environment, start the installed `dwm-mcp` entry point, and run real direct-HTTPS and isolated-browser checks against non-sensitive public pages. If using a system Chromium deployment, run the browser test with the same `DWM_BROWSER_EXECUTABLE_PATH` that production will use.
 
 ## Design notes
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import contextlib
+import os
 from typing import Literal
 from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin
@@ -20,6 +21,7 @@ _USER_AGENT = "durable-web-monitor-mcp/0.1 (+https://github.com/headleymonitor-u
 _PLAYWRIGHT_MCP_PACKAGE = "@playwright/mcp@0.0.80"
 _PLAYWRIGHT_BROWSER = "chromium"
 _PLAYWRIGHT_BROWSER_INSTALL = "npx -y playwright@1.63.0-alpha-2026-08-31 install chromium"
+_BROWSER_EXECUTABLE_ENV = "DWM_BROWSER_EXECUTABLE_PATH"
 
 
 @dataclass(frozen=True)
@@ -32,6 +34,32 @@ class FetchResult:
 class _NoRedirect(HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         return None
+
+
+def _playwright_mcp_args(executable_path: str | None = None) -> list[str]:
+    """Build the pinned Playwright MCP command-line arguments.
+
+    By default Playwright MCP uses its normal Chromium resolution. Deployments
+    that manage Chromium separately can set ``DWM_BROWSER_EXECUTABLE_PATH`` or
+    pass an explicit path here.
+    """
+    resolved_executable = executable_path or os.environ.get(_BROWSER_EXECUTABLE_ENV)
+    args = [
+        "-y",
+        _PLAYWRIGHT_MCP_PACKAGE,
+        "--headless",
+        "--sandbox",
+        "--isolated",
+        "--browser",
+        _PLAYWRIGHT_BROWSER,
+        "--image-responses",
+        "omit",
+        "--codegen",
+        "none",
+    ]
+    if resolved_executable:
+        args.extend(["--executable-path", resolved_executable])
+    return args
 
 
 def fetch_direct(url: str, *, timeout: float = 20.0) -> FetchResult:
@@ -89,15 +117,7 @@ async def fetch_browser(url: str, *, target: str = "body", depth: int = 10) -> F
 
     params = StdioServerParameters(
         command="npx",
-        args=[
-            "-y",
-            _PLAYWRIGHT_MCP_PACKAGE,
-            "--headless",
-            "--isolated",
-            "--browser",
-            _PLAYWRIGHT_BROWSER,
-            "--image-responses=omit",
-        ],
+        args=_playwright_mcp_args(),
     )
 
     # The high-level v2 Client owns the subprocess lifecycle. Exiting this
@@ -105,10 +125,16 @@ async def fetch_browser(url: str, *, target: str = "body", depth: int = 10) -> F
     async with Client(params) as client:
         nav = await client.call_tool("browser_navigate", {"url": url})
         if nav.is_error:
-            raise RuntimeError(
-                "Playwright MCP browser_navigate failed. Ensure Chromium is installed for "
-                f"the pinned Playwright build, for example: {_PLAYWRIGHT_BROWSER_INSTALL}"
-            )
+            configured = os.environ.get(_BROWSER_EXECUTABLE_ENV)
+            if configured:
+                hint = f" Check that {_BROWSER_EXECUTABLE_ENV}={configured!r} points to a working Chromium executable."
+            else:
+                hint = (
+                    " Ensure Chromium is installed for the pinned Playwright build, for example: "
+                    f"{_PLAYWRIGHT_BROWSER_INSTALL}. Alternatively set {_BROWSER_EXECUTABLE_ENV} "
+                    "to a trusted system Chromium executable."
+                )
+            raise RuntimeError("Playwright MCP browser_navigate failed." + hint)
         try:
             snap = await client.call_tool(
                 "browser_snapshot",
