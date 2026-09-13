@@ -52,13 +52,20 @@ source .venv/bin/activate
 pip install -e .
 ```
 
-For browser-backed checks, the first run may download the Playwright MCP package through `npx`.
+The package installs two commands:
+
+- `dwm` — CLI for checks and notification handling;
+- `dwm-mcp` — stdio MCP server.
+
+For browser-backed checks, the first run may download the pinned Playwright MCP package through `npx`.
 
 ## Run as an MCP server
 
 ```bash
-mcp run src/durable_web_monitor/server.py --transport stdio
+dwm-mcp
 ```
+
+This starts the bundled MCP server over stdio without requiring the optional MCP SDK CLI extra.
 
 The server exposes:
 
@@ -110,13 +117,15 @@ An empty `watch_terms` list means any normalized content change is noteworthy.
 }
 ```
 
-The browser adapter launches:
+v0.1.0 deliberately pins the browser integration to the version tested for this release:
 
 ```text
-npx -y @playwright/mcp@latest --headless --isolated --image-responses=omit
+npx -y @playwright/mcp@0.0.80 --headless --isolated --image-responses=omit
 ```
 
-and calls `browser_navigate`, `browser_snapshot`, then `browser_close`.
+Playwright accessibility snapshots contain generated locator references such as `[ref=e17]`. The monitor removes those ephemeral references before hashing so locator churn does not create false change alerts.
+
+Do not silently switch the package to `@latest` in production. Upgrade the pinned Playwright MCP version deliberately and rerun the unit and browser integration tests first.
 
 ## CLI
 
@@ -129,7 +138,6 @@ dwm check \
   --adapter direct
 
 dwm inbox --status new
-
 dwm ack --through-seq 12
 ```
 
@@ -139,7 +147,7 @@ A scheduler is intentionally outside this package. Keeping scheduling separate m
 
 Direct HTML fetches are reduced to visible text with scripts/styles/comments removed, HTML entities decoded, and whitespace collapsed.
 
-Browser snapshots are normalized as text by trimming line endings, collapsing horizontal whitespace, and removing repeated blank lines.
+Browser snapshots are normalized as text by removing generated Playwright locator references, trimming line endings, collapsing horizontal whitespace, and removing repeated blank lines.
 
 The normalized text is SHA-256 hashed. The database stores hashes and bounded excerpts rather than complete page bodies.
 
@@ -152,6 +160,8 @@ python -m unittest discover -s tests -v
 ```
 
 The Playwright MCP browser adapter is intentionally an integration boundary and is not launched by the unit tests.
+
+Before publishing a release, also test installation in a fresh virtual environment, start the installed `dwm-mcp` entry point, and run real direct-HTTPS and isolated-browser checks against non-sensitive public pages.
 
 ## Design notes
 
