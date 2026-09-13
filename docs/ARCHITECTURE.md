@@ -82,7 +82,14 @@ The browser adapter starts a new Playwright MCP subprocess for every fetch. v0.1
 npx -y @playwright/mcp@0.0.80
   --headless
   --isolated
+  --browser chromium
   --image-responses=omit
+```
+
+The compatible Chromium binary is installed once with the Playwright build currently used by that pinned MCP package:
+
+```bash
+npx -y playwright@1.63.0-alpha-2026-08-31 install chromium
 ```
 
 It then calls:
@@ -95,7 +102,7 @@ Before hashing, generated Playwright locator tokens such as `[ref=e17]` are remo
 
 Exiting the MCP client context tears down the subprocess. No shared browser profile is reused between monitor runs.
 
-The browser dependency is intentionally pinned rather than fetched as `latest`. Upgrade it deliberately, rerun unit and browser integration tests, then change the pin in a reviewed release.
+The browser and MCP dependencies are intentionally pinned rather than fetched as `latest`. Upgrade them deliberately, install the matching browser build, rerun unit and browser integration tests, then change the pins in a reviewed release.
 
 This costs more than direct HTTP, so use it only when rendering is necessary.
 

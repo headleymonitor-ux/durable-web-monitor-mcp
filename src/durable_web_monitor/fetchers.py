@@ -18,6 +18,8 @@ _MAX_BYTES = 2_000_000
 _MAX_REDIRECTS = 5
 _USER_AGENT = "durable-web-monitor-mcp/0.1 (+https://github.com/headleymonitor-ux/durable-web-monitor-mcp)"
 _PLAYWRIGHT_MCP_PACKAGE = "@playwright/mcp@0.0.80"
+_PLAYWRIGHT_BROWSER = "chromium"
+_PLAYWRIGHT_BROWSER_INSTALL = "npx -y playwright@1.63.0-alpha-2026-08-31 install chromium"
 
 
 @dataclass(frozen=True)
@@ -92,6 +94,8 @@ async def fetch_browser(url: str, *, target: str = "body", depth: int = 10) -> F
             _PLAYWRIGHT_MCP_PACKAGE,
             "--headless",
             "--isolated",
+            "--browser",
+            _PLAYWRIGHT_BROWSER,
             "--image-responses=omit",
         ],
     )
@@ -101,7 +105,10 @@ async def fetch_browser(url: str, *, target: str = "body", depth: int = 10) -> F
     async with Client(params) as client:
         nav = await client.call_tool("browser_navigate", {"url": url})
         if nav.is_error:
-            raise RuntimeError("Playwright MCP browser_navigate failed")
+            raise RuntimeError(
+                "Playwright MCP browser_navigate failed. Ensure Chromium is installed for "
+                f"the pinned Playwright build, for example: {_PLAYWRIGHT_BROWSER_INSTALL}"
+            )
         try:
             snap = await client.call_tool(
                 "browser_snapshot",

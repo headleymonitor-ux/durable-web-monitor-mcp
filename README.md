@@ -43,6 +43,7 @@ The browser adapter uses Playwright MCP's `--isolated` mode so browser profile s
 - Python 3.10+
 - Node.js 18+ and `npx` only if you use the browser adapter
 - `mcp>=2,<3`
+- Chromium installed for the pinned Playwright build if you use the browser adapter
 
 ## Install
 
@@ -57,7 +58,11 @@ The package installs two commands:
 - `dwm` — CLI for checks and notification handling;
 - `dwm-mcp` — stdio MCP server.
 
-For browser-backed checks, the first run may download the pinned Playwright MCP package through `npx`.
+For browser-backed checks, install Chromium once for the Playwright build used by Playwright MCP v0.0.80:
+
+```bash
+npx -y playwright@1.63.0-alpha-2026-08-31 install chromium
+```
 
 ## Run as an MCP server
 
@@ -120,12 +125,12 @@ An empty `watch_terms` list means any normalized content change is noteworthy.
 v0.1.0 deliberately pins the browser integration to the version tested for this release:
 
 ```text
-npx -y @playwright/mcp@0.0.80 --headless --isolated --image-responses=omit
+npx -y @playwright/mcp@0.0.80 --headless --isolated --browser chromium --image-responses=omit
 ```
 
 Playwright accessibility snapshots contain generated locator references such as `[ref=e17]`. The monitor removes those ephemeral references before hashing so locator churn does not create false change alerts.
 
-Do not silently switch the package to `@latest` in production. Upgrade the pinned Playwright MCP version deliberately and rerun the unit and browser integration tests first.
+Do not silently switch the package to `@latest` in production. Upgrade the pinned Playwright MCP and matching Playwright browser build deliberately, reinstall the browser binary, and rerun the unit and browser integration tests first.
 
 ## CLI
 
