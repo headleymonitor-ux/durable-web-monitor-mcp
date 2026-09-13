@@ -16,6 +16,7 @@ dependencies = [
 
 [project.scripts]
 dwm = "durable_web_monitor.cli:main"
+dwm-mcp = "durable_web_monitor.server:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/durable_web_monitor"]

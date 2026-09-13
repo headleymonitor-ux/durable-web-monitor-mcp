@@ -9,7 +9,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
-from .normalize import html_to_text, normalize_text
+from .normalize import html_to_text, normalize_browser_snapshot, normalize_text
 from .security import validate_public_https_url
 
 Adapter = Literal["direct", "browser"]
@@ -17,6 +17,7 @@ Adapter = Literal["direct", "browser"]
 _MAX_BYTES = 2_000_000
 _MAX_REDIRECTS = 5
 _USER_AGENT = "durable-web-monitor-mcp/0.1 (+https://github.com/headleymonitor-ux/durable-web-monitor-mcp)"
+_PLAYWRIGHT_MCP_PACKAGE = "@playwright/mcp@0.0.80"
 
 
 @dataclass(frozen=True)
@@ -88,7 +89,7 @@ async def fetch_browser(url: str, *, target: str = "body", depth: int = 10) -> F
         command="npx",
         args=[
             "-y",
-            "@playwright/mcp@latest",
+            _PLAYWRIGHT_MCP_PACKAGE,
             "--headless",
             "--isolated",
             "--image-responses=omit",
@@ -113,7 +114,7 @@ async def fetch_browser(url: str, *, target: str = "body", depth: int = 10) -> F
                 text = getattr(block, "text", None)
                 if isinstance(text, str):
                     chunks.append(text)
-            snapshot = normalize_text("\n".join(chunks))
+            snapshot = normalize_browser_snapshot("\n".join(chunks))
             if not snapshot:
                 raise RuntimeError("Playwright MCP returned an empty text snapshot")
             return FetchResult(url=url, text=snapshot, adapter="browser")

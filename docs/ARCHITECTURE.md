@@ -76,10 +76,10 @@ For adversarial URLs, infrastructure-level egress controls are still required.
 
 ## Browser adapter
 
-The browser adapter starts a new Playwright MCP subprocess for every fetch:
+The browser adapter starts a new Playwright MCP subprocess for every fetch. v0.1.0 pins the tested browser dependency to:
 
 ```text
-npx -y @playwright/mcp@latest
+npx -y @playwright/mcp@0.0.80
   --headless
   --isolated
   --image-responses=omit
@@ -91,7 +91,11 @@ It then calls:
 2. `browser_snapshot`
 3. `browser_close`
 
-Exiting the MCP client context also tears down the subprocess. No shared browser profile is reused between monitor runs.
+Before hashing, generated Playwright locator tokens such as `[ref=e17]` are removed from the textual accessibility snapshot. Those references are useful for interaction but are not page content and can otherwise create false change alerts when their generated values move between runs.
+
+Exiting the MCP client context tears down the subprocess. No shared browser profile is reused between monitor runs.
+
+The browser dependency is intentionally pinned rather than fetched as `latest`. Upgrade it deliberately, rerun unit and browser integration tests, then change the pin in a reviewed release.
 
 This costs more than direct HTTP, so use it only when rendering is necessary.
 

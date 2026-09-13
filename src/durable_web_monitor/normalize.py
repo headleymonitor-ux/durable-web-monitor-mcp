@@ -8,6 +8,7 @@ from html.parser import HTMLParser
 
 _HORIZONTAL = re.compile(r"[ \t\f\v]+")
 _BLANKS = re.compile(r"\n{3,}")
+_PLAYWRIGHT_REF = re.compile(r"\s*\[ref=[^\]\s]+\]")
 
 
 class _VisibleTextParser(HTMLParser):
@@ -50,6 +51,12 @@ def normalize_text(text: str) -> str:
     normalized = "\n".join(lines)
     normalized = _BLANKS.sub("\n\n", normalized)
     return normalized.strip()
+
+
+def normalize_browser_snapshot(snapshot: str) -> str:
+    """Normalize Playwright MCP text while dropping ephemeral locator refs."""
+    without_refs = _PLAYWRIGHT_REF.sub("", snapshot)
+    return normalize_text(without_refs)
 
 
 def html_to_text(document: str) -> str:

@@ -1,6 +1,6 @@
 import unittest
 
-from durable_web_monitor.normalize import html_to_text, normalize_text
+from durable_web_monitor.normalize import html_to_text, normalize_browser_snapshot, normalize_text
 
 
 class NormalizeTests(unittest.TestCase):
@@ -17,6 +17,12 @@ class NormalizeTests(unittest.TestCase):
         self.assertIn("World & friends", text)
         self.assertNotIn("hidden css", text)
         self.assertNotIn("hidden js", text)
+
+    def test_browser_snapshot_strips_ephemeral_locator_refs(self):
+        first = '- heading "Status" [level=1] [ref=e1]\n- link "Details" [ref=e2]'
+        second = '- heading "Status" [level=1] [ref=e41]\n- link "Details" [ref=e99]'
+        self.assertEqual(normalize_browser_snapshot(first), normalize_browser_snapshot(second))
+        self.assertNotIn("[ref=", normalize_browser_snapshot(first))
 
 
 if __name__ == "__main__":
