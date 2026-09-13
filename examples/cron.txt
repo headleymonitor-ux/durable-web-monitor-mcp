@@ -1,0 +1,4 @@
+# Example: check a page every 15 minutes.
+# Replace /path/to/venv/bin/dwm and the state path for your environment.
+#
+# */15 * * * * DWM_STATE_PATH=/var/lib/dwm/state.sqlite3 /path/to/venv/bin/dwm check --name docs --url https://example.com/docs --adapter direct
